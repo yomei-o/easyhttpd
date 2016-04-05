@@ -69,7 +69,7 @@ either expressed or implied, of the FreeBSD Project.
 #define TIMEOUT_RECV 10
 #define MAX_LINE 256
 
-#define I_USE_WEBSOCKET
+//#define I_USE_WEBSOCKET
 #define DIR_WEBSOCKET "websocket"
 
 void smplws_init()
