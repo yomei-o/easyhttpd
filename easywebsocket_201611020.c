@@ -26,6 +26,9 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
+
+//#define I_USE_SAMPLE
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
@@ -61,6 +64,9 @@ either expressed or implied, of the FreeBSD Project.
 #include "sha1.h"
 #include "base64.h"
 
+#ifdef I_USE_SAMPLE
+#include "websocketcmd.h"
+#endif
 
 #if defined(unix) || defined(ANDROID_NDK) || defined(__APPLE__)
 #define closesocket(s) close(s)
@@ -109,6 +115,13 @@ void* smplws_child_websocket_init(int fd, struct child_data* cd)
 	ret = malloc(sizeof(struct child_websocket));
 	if (ret == NULL)return ret;
 	memset(ret, 0, sizeof(struct child_websocket));
+
+#ifdef I_USE_SAMPLE
+	if (websocketcmd_open(cd->url) < 0){
+		free(ret);
+		return NULL;
+	}
+#endif
 	return ret;
 }
 
@@ -249,8 +262,22 @@ int smplws_child_websocket_frame_send(int fd, struct child_data* cd)
 int smplws_child_websocket_frame_data_recv(int fd, struct child_data* cd)
 {
 	struct child_websocket* cw = (struct child_websocket*)(cd->vp);
-	printf("data >>%s<< \n",cw->buf);
+	printf("data >>%s<< \n", cw->buf);
+#ifdef I_USE_SAMPLE
+	{
+		int ret = -1;
+		char out[MAX_LINE];
+		
+		ret = websocketcmd_data(cd->url, cw->buf, out, sizeof(out));
+		if (ret < 0)return ret;
+		strncpy(cw->buf, out, MAX_LINE);
+		cw->buf[MAX_LINE - 1] = 0;
+		cw->buf_sz = strlen(cw->buf);
+		return smplws_child_websocket_frame_send(fd, cd);
+	}
+#else
 	return smplws_child_websocket_frame_send(fd, cd);
+#endif
 }
 
 
@@ -319,6 +346,9 @@ int smplws_child_websocket_frame(int fd, struct child_data* cd)
 
 int smplws_child_websocket_done(struct child_data* cd)
 {
+#ifdef I_USE_SAMPLE
+	websocketcmd_close(cd->url);
+#endif
 	return 0;
 }
 
