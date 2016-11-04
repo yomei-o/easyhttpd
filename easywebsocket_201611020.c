@@ -26,8 +26,7 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
-
-//#define I_USE_SAMPLE
+#define I_USE_SAMPLE
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -91,6 +90,7 @@ struct child_data
 struct child_websocket{
 	int version;
 	int buf_sz;
+	void* vpp;
 	char key[MAX_LINE];
 	char buf[MAX_LINE];
 };
@@ -111,13 +111,16 @@ static void mystrupr(char*key)
 void* smplws_child_websocket_init(int fd, struct child_data* cd)
 {
 	void* ret = NULL;
+	struct child_websocket* cw;
 
 	ret = malloc(sizeof(struct child_websocket));
 	if (ret == NULL)return ret;
+
 	memset(ret, 0, sizeof(struct child_websocket));
+	cw = (struct child_websocket*)ret;
 
 #ifdef I_USE_SAMPLE
-	if (websocketcmd_open(cd->url) < 0){
+	if (websocketcmd_open(cd->url,&(cw->vpp)) < 0){
 		free(ret);
 		return NULL;
 	}
@@ -201,10 +204,6 @@ int smplws_child_websocket_ping(int fd, struct child_data* cd)
 	return send(fd, buf, 6, 0);
 }
 
-int smplws_child_websocket_idle(int fd, struct child_data* cd)
-{
-	return 0;
-}
 
 int smplws_child_websocket_pong_send(int fd, struct child_data* cd)
 {
@@ -266,20 +265,36 @@ int smplws_child_websocket_frame_data_recv(int fd, struct child_data* cd)
 #ifdef I_USE_SAMPLE
 	{
 		int ret = -1;
-		char out[MAX_LINE];
 		
-		ret = websocketcmd_data(cd->url, cw->buf, out, sizeof(out));
+		ret = websocketcmd_data(cd->url,cw->vpp, cw->buf);
 		if (ret < 0)return ret;
-		strncpy(cw->buf, out, MAX_LINE);
-		cw->buf[MAX_LINE - 1] = 0;
-		cw->buf_sz = strlen(cw->buf);
-		return smplws_child_websocket_frame_send(fd, cd);
 	}
 #else
 	return smplws_child_websocket_frame_send(fd, cd);
 #endif
+	return 0;
 }
 
+int smplws_child_websocket_idle(int fd, struct child_data* cd)
+{
+#ifdef I_USE_SAMPLE
+	struct child_websocket* cw = (struct child_websocket*)(cd->vp);
+	{
+		int ret = -1;
+		char out[MAX_LINE];
+		out[0] = 0;
+		ret = websocketcmd_idle(cd->url, cw->vpp, out, sizeof(out));
+		if (ret < 0)return ret;
+		if (strlen(out) < 1)return 0;
+
+		strncpy(cw->buf, out, MAX_LINE);
+		cw->buf[MAX_LINE - 1] = 0;
+		cw->buf_sz = strlen(cw->buf);
+		smplws_child_websocket_frame_send(fd, cd);
+	}
+#endif
+	return 0;
+}
 
 
 
@@ -347,7 +362,8 @@ int smplws_child_websocket_frame(int fd, struct child_data* cd)
 int smplws_child_websocket_done(struct child_data* cd)
 {
 #ifdef I_USE_SAMPLE
-	websocketcmd_close(cd->url);
+	struct child_websocket* cw = (struct child_websocket*)(cd->vp);
+	websocketcmd_close(cd->url,cw->vpp);
 #endif
 	return 0;
 }
