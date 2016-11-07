@@ -261,7 +261,7 @@ int smplws_child_websocket_frame_send(int fd, struct child_data* cd)
 int smplws_child_websocket_frame_data_recv(int fd, struct child_data* cd)
 {
 	struct child_websocket* cw = (struct child_websocket*)(cd->vp);
-	printf("data >>%s<< \n", cw->buf);
+	//printf("data >>%s<< \n", cw->buf);
 #ifdef I_USE_SAMPLE
 	{
 		int ret = -1;
@@ -279,6 +279,7 @@ int smplws_child_websocket_idle(int fd, struct child_data* cd)
 {
 #ifdef I_USE_SAMPLE
 	struct child_websocket* cw = (struct child_websocket*)(cd->vp);
+	if (cw == NULL)return -1;
 	{
 		int ret = -1;
 		char out[MAX_LINE];
@@ -363,6 +364,8 @@ int smplws_child_websocket_done(struct child_data* cd)
 {
 #ifdef I_USE_SAMPLE
 	struct child_websocket* cw = (struct child_websocket*)(cd->vp);
+	if (cw == NULL)return -1;
+
 	websocketcmd_close(cd->url,cw->vpp);
 #endif
 	return 0;
