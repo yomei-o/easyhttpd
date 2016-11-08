@@ -524,6 +524,7 @@ int mywebsocket_send_string(int fd,const char* data)
 {
 	if (data == NULL)return -1;
 	mywebsocket_data(fd, 1, data, strlen(data));
+	return 0;
 }
 
 int mywebsocket_wait_time(int s,int tt, int(*f)(void* vp,int type, void* data, int sz),void* vp)
