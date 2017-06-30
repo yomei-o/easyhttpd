@@ -95,7 +95,7 @@ void myhttp_done()
 //
 
 
-void setsockopt_timeout(int fd, int tt)
+static void setsockopt_timeout(int fd, int tt)
 {
 	int timeout = tt;
 	int ret;
